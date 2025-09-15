@@ -1,0 +1,55 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15
+    container_name: my-postgres
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: my-backend
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@postgres:5432/mydb
+      LAMBDA_ENDPOINT_URL: http://creepycrawly:4000/api/generate
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - creepycrawly
+    command: npm run dev
+
+  creepycrawly:
+    build:
+      context: ./creepycrawly
+      dockerfile: Dockerfile
+    container_name: my-creepycrawly
+    env_file: ./creepycrawly/.env
+    ports:
+      - "4000:4000"
+    command: npm run start
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: my-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: http://backend:8000
+    command: npm run dev
+
+volumes:
+  pgdata:
